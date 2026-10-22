@@ -231,12 +231,6 @@ function renderSavedLocations() {
       ));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       renderSavedLocations();
-
-      const sharedZip = new URLSearchParams(window.location.search).get("zip");
-      if (sharedZip && /^\d{5}$/.test(sharedZip)) {
-        searchInput.value = sharedZip;
-        loadWeather(sharedZip);
-      }
       updateSaveButton();
     });
     chip.append(open, remove);
@@ -424,3 +418,9 @@ function formatDateTime(value) {
 }
 
 renderSavedLocations();
+
+const sharedZip = new URLSearchParams(window.location.search).get("zip");
+if (sharedZip && /^\d{5}$/.test(sharedZip)) {
+  searchInput.value = sharedZip;
+  loadWeather(sharedZip);
+}
