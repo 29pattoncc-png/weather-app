@@ -25,6 +25,10 @@ The app only accepts five-digit U.S. ZIP codes. It does not provide worldwide fo
 
 If the ZIP lookup or forecast request fails, the page displays an error instead of crashing. Hourly forecast or alert failures do not prevent the regular forecast from displaying.
 
+## GitHub Pages
+
+The site also works as a static GitHub Pages project site. On `github.io`, the browser requests ZIP geocoding from Open-Meteo and forecasts and alerts from the National Weather Service directly; no Python server is available or needed there. To publish it, configure the repository's Pages source to deploy the `main` branch from the repository root. Forecast URLs include the selected ZIP code so they can be shared.
+
 ## Tests
 
 Run the built-in tests with `python -m unittest`.

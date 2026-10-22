@@ -1,4 +1,6 @@
 const STORAGE_KEY = "weather-desk-saved-locations";
+const PUBLIC_API_ERROR = "Weather information is currently unavailable. Please try again.";
+const USE_PUBLIC_APIS = window.location.hostname.endsWith(".github.io");
 
 const searchForm = document.querySelector("#search-form");
 const searchInput = document.querySelector("#place-search");
@@ -67,11 +69,118 @@ async function requestJson(url) {
   return data;
 }
 
+function isNwsUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:"
+      && parsed.hostname === "api.weather.gov"
+      && !parsed.username
+      && !parsed.password
+      && (!parsed.port || parsed.port === "443");
+  } catch {
+    return false;
+  }
+}
+
+async function requestPublicJson(url, accept) {
+  let response;
+  try {
+    response = await fetch(url, { headers: { Accept: accept } });
+  } catch {
+    throw new Error("Could not connect to the weather services. Please try again.");
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("The weather service returned an unreadable response. Please try again.");
+  }
+  if (!response.ok) {
+    throw new Error(data.detail || data.title || PUBLIC_API_ERROR);
+  }
+  return data;
+}
+
+async function fetchOptionalNws(url) {
+  try {
+    if (!isNwsUrl(url)) throw new Error("The weather service returned an invalid forecast link.");
+    return { data: await requestPublicJson(url, "application/geo+json"), error: null };
+  } catch {
+    return { data: null, error: PUBLIC_API_ERROR };
+  }
+}
+
+async function fetchPublicWeather(zipCode) {
+  const geocodingUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
+  geocodingUrl.search = new URLSearchParams({
+    name: zipCode,
+    count: "1",
+    language: "en",
+    format: "json",
+    countryCode: "US",
+  });
+  const geocoding = await requestPublicJson(geocodingUrl, "application/json");
+  const place = Array.isArray(geocoding.results)
+    ? geocoding.results.find((result) => result.country_code === "US")
+    : null;
+  if (!place) throw new Error("That ZIP code could not be found. Check it and try again.");
+
+  const latitude = Number(place.latitude);
+  const longitude = Number(place.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+      || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    throw new Error("The ZIP code lookup returned invalid coordinates.");
+  }
+
+  const pointUrl = `https://api.weather.gov/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+  const point = await requestPublicJson(pointUrl, "application/geo+json");
+  const properties = point.properties || {};
+  const forecastUrl = properties.forecast;
+  if (!isNwsUrl(forecastUrl)) {
+    throw new Error("The weather service did not provide a valid forecast link.");
+  }
+
+  const forecast = await requestPublicJson(forecastUrl, "application/geo+json");
+  const alertsUrl = new URL("https://api.weather.gov/alerts/active");
+  alertsUrl.searchParams.set("point", `${latitude.toFixed(4)},${longitude.toFixed(4)}`);
+  const [hourlyResult, alertsResult] = await Promise.all([
+    properties.forecastHourly
+      ? fetchOptionalNws(properties.forecastHourly)
+      : Promise.resolve({ data: null, error: PUBLIC_API_ERROR }),
+    fetchOptionalNws(alertsUrl.toString()),
+  ]);
+
+  return {
+    latitude,
+    longitude,
+    provider: "National Weather Service",
+    location: {
+      latitude,
+      longitude,
+      city: place.name || "Unknown city",
+      state: place.admin1 || "",
+      zip: zipCode,
+    },
+    forecastUrl,
+    forecast: forecast.properties?.periods || [],
+    hourly: hourlyResult.data?.properties?.periods || [],
+    alerts: alertsResult.data?.features || [],
+    hourlyError: hourlyResult.error,
+    alertsError: alertsResult.error,
+  };
+}
+
 async function loadWeather(zipCode) {
   weatherContent.hidden = true;
   showMessage(`Loading forecast for ZIP code ${zipCode}…`);
   try {
-    const data = await requestJson(`/api/weather?zip=${encodeURIComponent(zipCode)}`);
+    const data = USE_PUBLIC_APIS
+      ? await fetchPublicWeather(zipCode)
+      : await requestJson(`/api/weather?zip=${encodeURIComponent(zipCode)}`);
+    const url = new URL(window.location.href);
+    url.searchParams.set("zip", zipCode);
+    window.history.replaceState(null, "", url);
     activeLocation = {
       name: `${data.location.city}, ${data.location.state} (${data.location.zip})`,
       zip: data.location.zip,
@@ -122,6 +231,12 @@ function renderSavedLocations() {
       ));
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       renderSavedLocations();
+
+      const sharedZip = new URLSearchParams(window.location.search).get("zip");
+      if (sharedZip && /^\d{5}$/.test(sharedZip)) {
+        searchInput.value = sharedZip;
+        loadWeather(sharedZip);
+      }
       updateSaveButton();
     });
     chip.append(open, remove);
