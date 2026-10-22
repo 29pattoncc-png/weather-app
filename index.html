@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a43">
+  <title>Weather Desk | U.S. ZIP Code Weather</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Weather Desk home">
+      <span class="brand-mark" aria-hidden="true">☼</span>
+      <span>Weather <strong>Desk</strong></span>
+    </a>
+    <span class="source-note">U.S. forecasts by ZIP code</span>
+  </header>
+
+  <main class="page-shell">
+    <section class="intro">
+      <div>
+        <p class="eyebrow">YOUR LOCAL FORECAST</p>
+        <h1>Weather, at a glance.</h1>
+        <p class="intro-copy">Enter a 5-digit U.S. ZIP code to see the local forecast and active alerts.</p>
+      </div>
+      <div class="date-pill" id="today-label"></div>
+    </section>
+
+    <section class="search-panel panel" aria-label="Find a location">
+      <form id="search-form" class="search-form">
+        <label class="sr-only" for="place-search">U.S. ZIP code</label>
+        <span class="search-icon" aria-hidden="true">⌕</span>
+        <input id="place-search" name="zip" type="text" inputmode="numeric" autocomplete="postal-code"
+          pattern="[0-9]{5}" maxlength="5" required placeholder="Enter ZIP code (e.g. 10001)">
+        <button class="button button-primary" type="submit">Get weather</button>
+      </form>
+      <p class="zip-help">U.S. ZIP codes only. Enter all 5 digits, including any leading zero.</p>
+    </section>
+
+    <section class="saved-section" aria-label="Saved locations">
+      <div class="section-heading">
+        <h2>Saved locations</h2>
+        <span id="saved-hint" class="muted">Save ZIP codes to check them again quickly.</span>
+      </div>
+      <div id="saved-locations" class="saved-locations"></div>
+    </section>
+
+    <div id="status-message" class="status-message" role="status" aria-live="polite" hidden></div>
+
+    <section id="weather-content" hidden>
+      <div class="location-heading">
+        <div>
+          <p class="eyebrow">FORECAST FOR</p>
+          <h2 id="location-title"></h2>
+          <p id="coordinates-label" class="muted"></p>
+        </div>
+        <button id="save-location-button" class="button button-outline" type="button">＋ Save location</button>
+      </div>
+
+      <section class="alert-panel panel" id="alerts-panel" aria-label="Weather alerts"></section>
+
+      <section class="forecast-section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow" id="forecast-provider">NATIONAL WEATHER SERVICE</p>
+            <h2>Forecast</h2>
+          </div>
+          <a id="forecast-source" class="text-link" target="_blank" rel="noopener noreferrer">View NWS forecast ↗</a>
+        </div>
+        <div id="daily-forecast" class="daily-grid"></div>
+      </section>
+
+      <section class="hourly-section panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">COMING UP</p>
+            <h2>Hourly forecast</h2>
+          </div>
+          <p class="muted">Next 12 hours</p>
+        </div>
+        <div id="hourly-forecast" class="hourly-list"></div>
+        <p id="hourly-message" class="muted sub-message" hidden></p>
+      </section>
+
+      <aside class="school-note">
+        <span aria-hidden="true">ⓘ</span>
+        <p><strong>School activity:</strong> This app does not determine school openings or closures. Check your school district’s official updates.</p>
+      </aside>
+    </section>
+
+    <footer>
+      <p>U.S. ZIP codes are matched to coordinates for the <a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener noreferrer">National Weather Service API</a>. No API key is required.</p>
+      <p>Forecasts can change. For urgent weather information, follow official NWS guidance.</p>
+    </footer>
+  </main>
+</body>
+</html>
